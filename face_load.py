@@ -10,7 +10,7 @@ cursor = conn.cursor()
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS faces (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
+        name TEXT UNIQUE,
         encoding BLOB
     )
 ''')
@@ -30,8 +30,19 @@ def add_new_face(name, image):
     # Get face encoding from the image
     face_encoding = face_recognition.face_encodings(image)[0]
 
-    # Store encoding and name in the database
-    cursor.execute("INSERT INTO faces (name, encoding) VALUES (?, ?)", (name, face_encoding.tobytes()))
+    # Check if the face already exists
+    cursor.execute("SELECT id FROM faces WHERE name = ?", (name,))
+    row = cursor.fetchone()
+
+    if row:
+        # Update existing face
+        cursor.execute("UPDATE faces SET encoding = ? WHERE name = ?", (face_encoding.tobytes(), name))
+        print(f"Face updated for {name}")
+    else:
+        # Insert new face
+        cursor.execute("INSERT INTO faces (name, encoding) VALUES (?, ?)", (name, face_encoding.tobytes()))
+        print(f"Face added for {name}")
+
     conn.commit()
     print(f"Face added for {name}")
 
